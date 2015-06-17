@@ -13,7 +13,7 @@
 USB Usb;
 XBOXRECV Xbox(&Usb);
 
-uint8_t running = 0;
+uint8_t controlling = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -22,50 +22,47 @@ void setup() {
 #endif
   int done = 0;
 
+  Serial.print(F("\r\nWelcome to the robot controller software!"));
+
   while (!done) {
     if (Usb.Init() == -1) {
       Serial.print(F("\r\nOSC did not start"));
       delay(2000);
+    } else {
+      done = 1;
     }
   }
-  Serial.print(F("\r\nXbox Wireless Receiver Library Started"));
-  Xbox.setLedBlink(ALL, 0);
+  //Xbox.setLedBlink(ALL, 0);
+  Serial.print(F("\r\nPress the Start button to start controlling the robot"));
 }
 
 void loop() {
   Usb.Task();
   if (Xbox.XboxReceiverConnected) {
     process_buttons();
-  } else {
-    Serial.print(F("\r\nXbox Wireless Receiver not Connected"));
-    delay(500);
   }
 }
 
 void process_buttons() {
     for (uint8_t i = 0; i < 4; i++) {
       if (Xbox.Xbox360Connected[i]) {
-        if (!running) {
+        if (!controlling) {
           if (Xbox.getButtonClick(START, i)) {
             Xbox.setLedMode(ALTERNATING, i);
-            running = 1;
+            controlling = 1;
           } else {
             return;
           }
-          if (Xbox.getButtonClick(BACK, i) || Xbox.getButtonClick(XBOX, i)) {
-            running = 0;
-            // stop everything
-            set_motor(0, 0);
-            Xbox.setLedBlink(ALL, i);
-            Serial.print(F("Xbox (Battery: "));
-            Serial.print(Xbox.getBatteryLevel(i)); // The battery level in the range 0-3
-            Serial.println(F(")"));
-            return;
-          }
-          if (Xbox.getButtonClick(SYNC, i)) {
-            Serial.println(F("Sync"));
-            Xbox.disconnect(i);
-          }
+        }
+        
+        if (Xbox.getButtonClick(BACK, i) || Xbox.getButtonClick(XBOX, i) || Xbox.getButtonClick(SYNC, i)) {
+          controlling = 0;
+          // stop everything
+          set_motor(0, 0);
+          Xbox.setLedBlink(ALL, i);
+          Serial.print(F("Battery: "));
+          Serial.print(Xbox.getBatteryLevel(i)); // The battery level in the range 0-3
+          return;
         }
 
         int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
@@ -80,7 +77,7 @@ void process_buttons() {
 }
 
 void set_motor(int16_t left, int16_t right) {
-  // do motor control here
+  // FIXME -- do motor control here
 }
 
 
