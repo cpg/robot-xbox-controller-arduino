@@ -49,6 +49,9 @@ void loop() {
 #define MIDDLE_POINT 127
 #define CONTROLLER_RATIO 656
 
+#define MAX_CONTROLLER 32767
+#define MIN_CONTROLLER -32768
+
 void process_buttons() {
     for (uint8_t i = 0; i < 4; i++) {
       if (Xbox.Xbox360Connected[i]) {
@@ -73,21 +76,55 @@ void process_buttons() {
 
         if (Xbox.getButtonPress(L2, i) && Xbox.getButtonPress(R2, i)) {
           set_motor(MAX_FORWARD, MAX_FORWARD);
-        } else if (Xbox.getButtonPress(L2, i)) {
-          set_motor(MAX_FORWARD, MAX_BACKWARD);
-        } else if (Xbox.getButtonPress(R2, i)) {
-          set_motor(MAX_BACKWARD, MAX_FORWARD);
-        } else {
-          int16_t lh = Xbox.getAnalogHat(LeftHatY, i) >> 1;
-          // int16_t rh = Xbox.getAnalogHat(RightHatY, i);
-          int16_t rh = Xbox.getAnalogHat(LeftHatX, i) >> 1;
-
-          if (lh > 0) {
-            set_motor(c2m_scale(lh+rh), c2m_scale(lh-rh));
-          } else {
-            set_motor(c2m_scale(lh-rh), c2m_scale(lh+rh));
-          }
+          return;
         }
+        if (Xbox.getButtonPress(L2, i)) {
+          set_motor(MAX_FORWARD, MAX_BACKWARD);
+          return;
+        }
+        if (Xbox.getButtonPress(R2, i)) {
+          set_motor(MAX_BACKWARD, MAX_FORWARD);
+          return;
+        }
+        
+        long vertical = long(Xbox.getAnalogHat(LeftHatY, i));
+        long horizontal = long(Xbox.getAnalogHat(LeftHatX, i));
+
+        if (vertical > 0) { // forwards with skew left/right
+          if (horizontal > 0) { // right
+            if (vertical+horizontal >= MAX_CONTROLLER) {
+              int16_t right = int(MAX_CONTROLLER-horizontal);
+              set_motor(c2m_scale(MAX_CONTROLLER), c2m_scale(right));
+              return;
+            }
+          } else { //left
+            if (vertical-horizontal >= MAX_CONTROLLER) {
+              int16_t left = int(MAX_CONTROLLER+horizontal);
+              set_motor(c2m_scale(left), c2m_scale(MAX_CONTROLLER));
+              return;
+            }
+          }
+          set_motor(c2m_scale(vertical+horizontal), c2m_scale(vertical-horizontal));
+          return;
+        }
+
+        // vertical < 0 (backwards)
+
+        if (horizontal < 0) { // joystick left 
+          if (vertical+horizontal <= MIN_CONTROLLER) {
+            int16_t left = MIN_CONTROLLER-horizontal;
+            set_motor(c2m_scale(left), c2m_scale(MIN_CONTROLLER));
+            return;
+          }
+        } else { // right
+          if (vertical-horizontal <= MIN_CONTROLLER) {
+            int16_t right = int(MIN_CONTROLLER+horizontal);
+            set_motor(c2m_scale(MIN_CONTROLLER), c2m_scale(right));
+            return;
+          }          
+        }
+        set_motor(c2m_scale(vertical-horizontal), c2m_scale(vertical+horizontal));
+        return;
       }
     }
 }
@@ -115,6 +152,7 @@ void set_motor(uint8_t left, uint8_t right) {
   Serial.println();
   analogWrite(2, left);
   analogWrite(3, right);
+  delay(50);
 }
 
 
