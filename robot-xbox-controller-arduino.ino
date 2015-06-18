@@ -78,10 +78,15 @@ void process_buttons() {
         } else if (Xbox.getButtonPress(R2, i)) {
           set_motor(MAX_BACKWARD, MAX_FORWARD);
         } else {
-          int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
-          int16_t rh = Xbox.getAnalogHat(RightHatY, i);
-        
-          set_motor(c2m_scale(lh), c2m_scale(rh));
+          int16_t lh = Xbox.getAnalogHat(LeftHatY, i) >> 1;
+          // int16_t rh = Xbox.getAnalogHat(RightHatY, i);
+          int16_t rh = Xbox.getAnalogHat(LeftHatX, i) >> 1;
+
+          if (lh > 0) {
+            set_motor(c2m_scale(lh+rh), c2m_scale(lh-rh));
+          } else {
+            set_motor(c2m_scale(lh-rh), c2m_scale(lh+rh));
+          }
         }
       }
     }
