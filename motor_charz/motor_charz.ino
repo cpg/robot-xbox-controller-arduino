@@ -43,6 +43,8 @@ void loop() {
   }
 }
 
+uint8_t current_motor = 127;
+
 void process_buttons() {
     for (uint8_t i = 0; i < 4; i++) {
       if (Xbox.Xbox360Connected[i]) {
@@ -58,40 +60,25 @@ void process_buttons() {
         if (Xbox.getButtonClick(BACK, i) || Xbox.getButtonClick(XBOX, i) || Xbox.getButtonClick(SYNC, i)) {
           controlling = 0;
           // stop everything
-          set_motor(0, 0);
+          set_motor(127, 127);
           Xbox.setLedBlink(ALL, i);
           Serial.print(F("Battery: "));
           Serial.print(Xbox.getBatteryLevel(i)); // The battery level in the range 0-3
           return;
         }
 
-        int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
-        int16_t rh = Xbox.getAnalogHat(RightHatY, i);
-        
-        set_motor(c2m_scale(lh), c2m_scale(rh));
-        // Serial.print(F("L: "));
-        // Serial.print(lh);
-        // Serial.print(F("\t\tR: "));
-        // Serial.print(rh);
-        // Serial.println();
+        if (Xbox.getButtonClick(Y, i) && current_motor < 250) {
+          current_motor += 5;
+          set_motor(current_motor, 0);
+        }
+        if (Xbox.getButtonClick(A, i) && current_motor > 0) {
+          current_motor -= 5;
+          set_motor(current_motor, 0);
+        }
       }
     }
 }
 
-// dead zone threshold for the xbox joystick
-#define DEAD_ZONE_THRESHOLD 6000
-
-uint8_t c2m_scale(int16_t stick) {
-  // establish a deadzone
-  if (abs(stick) < DEAD_ZONE_THRESHOLD) {
-    stick = 0;
-  }
-
-  // make it range from 0 to 250 or so
-  uint8_t ret = stick/656 + 127;
-
-  return ret;
-}
 
 void set_motor(uint8_t left, uint8_t right) {
   // FIXME -- do motor control here
