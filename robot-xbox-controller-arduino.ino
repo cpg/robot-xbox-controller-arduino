@@ -43,6 +43,12 @@ void loop() {
   }
 }
 
+// per experience, this is the max speed backward and forward
+#define MAX_BACKWARD 77
+#define MAX_FORWARD 177
+#define MIDDLE_POINT 127
+#define CONTROLLER_RATIO 656
+
 void process_buttons() {
     for (uint8_t i = 0; i < 4; i++) {
       if (Xbox.Xbox360Connected[i]) {
@@ -58,22 +64,25 @@ void process_buttons() {
         if (Xbox.getButtonClick(BACK, i) || Xbox.getButtonClick(XBOX, i) || Xbox.getButtonClick(SYNC, i)) {
           controlling = 0;
           // stop everything
-          set_motor(0, 0);
+          set_motor(MIDDLE_POINT, MIDDLE_POINT);
           Xbox.setLedBlink(ALL, i);
           Serial.print(F("Battery: "));
           Serial.print(Xbox.getBatteryLevel(i)); // The battery level in the range 0-3
           return;
         }
 
-        int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
-        int16_t rh = Xbox.getAnalogHat(RightHatY, i);
+        if (Xbox.getButtonPress(L2, i) && Xbox.getButtonPress(R2, i)) {
+          set_motor(MAX_FORWARD, MAX_FORWARD);
+        } else if (Xbox.getButtonPress(L2, i)) {
+          set_motor(MAX_FORWARD, MAX_BACKWARD);
+        } else if (Xbox.getButtonPress(R2, i)) {
+          set_motor(MAX_BACKWARD, MAX_FORWARD);
+        } else {
+          int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
+          int16_t rh = Xbox.getAnalogHat(RightHatY, i);
         
-        set_motor(c2m_scale(lh), c2m_scale(rh));
-        // Serial.print(F("L: "));
-        // Serial.print(lh);
-        // Serial.print(F("\t\tR: "));
-        // Serial.print(rh);
-        // Serial.println();
+          set_motor(c2m_scale(lh), c2m_scale(rh));
+        }
       }
     }
 }
@@ -88,13 +97,12 @@ uint8_t c2m_scale(int16_t stick) {
   }
 
   // make it range from 0 to 250 or so
-  uint8_t ret = stick/656 + 127;
+  uint8_t ret = stick/CONTROLLER_RATIO + MIDDLE_POINT;
 
   return ret;
 }
 
 void set_motor(uint8_t left, uint8_t right) {
-  // FIXME -- do motor control here
   Serial.print(F("L: "));
   Serial.print(left);
   Serial.print(F("\t\tR: "));
