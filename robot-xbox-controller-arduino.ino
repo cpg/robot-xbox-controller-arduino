@@ -67,17 +67,41 @@ void process_buttons() {
 
         int16_t lh = Xbox.getAnalogHat(LeftHatY, i);
         int16_t rh = Xbox.getAnalogHat(RightHatY, i);
-        Serial.print(F("L: "));
-        Serial.print(lh);
-        Serial.print(F("\t\tR: "));
-        Serial.print(rh);
-        Serial.println();
+        
+        set_motor(c2m_scale(lh), c2m_scale(rh));
+        // Serial.print(F("L: "));
+        // Serial.print(lh);
+        // Serial.print(F("\t\tR: "));
+        // Serial.print(rh);
+        // Serial.println();
       }
     }
 }
 
-void set_motor(int16_t left, int16_t right) {
+// dead zone threshold for the xbox joystick
+#define DEAD_ZONE_THRESHOLD 5000
+
+int16_t c2m_scale(int16_t stick) {
+  // establish a deadzone
+  if (abs(stick) < DEAD_ZONE_THRESHOLD) {
+    stick = 0;
+  }
+
+  // make it range from 0 to 250 or so
+  int8_t ret = stick/260 + 126;
+
+  return ret;
+}
+
+void set_motor(int8_t left, int8_t right) {
   // FIXME -- do motor control here
+  Serial.print(F("L: "));
+  Serial.print(left);
+  Serial.print(F("\t\tR: "));
+  Serial.print(right);
+  Serial.println();
+  analogWrite(2, left);
+  analogWrite(3, right);
 }
 
 
